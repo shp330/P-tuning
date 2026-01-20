@@ -11,8 +11,8 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from pet.utils import InputFeatures, InputExample
-from data_utils.task_pvps import PVP, PVPS
+from pt_fewshot.pet.utils import InputFeatures, InputExample
+from pt_fewshot.data_utils.task_pvps import PVP, PVPS
 
 
 class Preprocessor(ABC):

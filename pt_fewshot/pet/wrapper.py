@@ -31,11 +31,11 @@ from transformers import InputExample, AdamW, get_linear_schedule_with_warmup, \
     RobertaTokenizer, AlbertForMaskedLM, AlbertTokenizer, AlbertConfig
 from transformers.data.metrics import simple_accuracy
 
-import log
-from pet import preprocessor
-from data_utils.task_processors import TASK_HELPERS
-from pet.config import WrapperConfig, EvalConfig
-from pet.utils import InputFeatures, DictDataset, distillation_loss, exact_match
+from pt_fewshot import log
+from pt_fewshot.pet import preprocessor
+from pt_fewshot.data_utils.task_processors import TASK_HELPERS
+from pt_fewshot.pet.config import WrapperConfig, EvalConfig
+from pt_fewshot.pet.utils import InputFeatures, DictDataset, distillation_loss, exact_match
 
 logger = log.get_logger('root')
 

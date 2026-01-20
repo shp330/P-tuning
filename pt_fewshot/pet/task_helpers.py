@@ -20,7 +20,7 @@ import re
 import numpy as np
 from torch.nn import CrossEntropyLoss
 
-from pet.utils import InputFeatures, InputExample, get_verbalization_ids, chunks, trim_input_ids, remove_final_punc, \
+from pt_fewshot.pet.utils import InputFeatures, InputExample, get_verbalization_ids, chunks, trim_input_ids, remove_final_punc, \
     lowercase_first
 
 

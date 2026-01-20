@@ -22,9 +22,9 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
 from typing import List, Dict, Callable
 
-import log
-from pet import task_helpers
-from pet.utils import InputExample
+from pt_fewshot import log
+from pt_fewshot.pet import task_helpers
+from pt_fewshot.pet.utils import InputExample
 
 
 logger = log.get_logger('root')

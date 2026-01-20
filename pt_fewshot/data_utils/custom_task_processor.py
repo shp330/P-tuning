@@ -21,7 +21,7 @@ import os
 from typing import List
 
 from task_processors import DataProcessor, PROCESSORS
-from pet.utils import InputExample
+from pt_fewshot.pet.utils import InputExample
 
 
 class MyTaskDataProcessor(DataProcessor):

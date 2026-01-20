@@ -20,7 +20,7 @@ This file shows an example of a PVP for a new task.
 from typing import List
 
 from task_pvps import PVP, PVPS
-from pet.utils import InputExample
+from pt_fewshot.pet.utils import InputExample
 
 
 class MyTaskPVP(PVP):

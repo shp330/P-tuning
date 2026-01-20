@@ -22,11 +22,11 @@ import torch
 from sklearn.metrics import f1_score
 from transformers.data.metrics import simple_accuracy
 
-import log
-from pet.config import EvalConfig, TrainConfig
-from pet.utils import InputExample, exact_match, save_logits, save_predictions, softmax, LogitsList, set_seed, eq_div
-from pet.wrapper import TransformerModelWrapper
-from pet.config import  WrapperConfig
+from pt_fewshot import log
+from pt_fewshot.pet.config import EvalConfig, TrainConfig
+from pt_fewshot.pet.utils import InputExample, exact_match, save_logits, save_predictions, softmax, LogitsList, set_seed, eq_div
+from pt_fewshot.pet.wrapper import TransformerModelWrapper
+from pt_fewshot.pet.config import  WrapperConfig
 
 logger = log.get_logger('root')
 
