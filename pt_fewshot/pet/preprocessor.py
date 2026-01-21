@@ -55,6 +55,7 @@ class MLMPreprocessor(Preprocessor):
         if padding_length < 0:
             raise ValueError(f"Maximum sequence length is too small, got {len(input_ids)} input ids")
 
+        # 对 input_ids padding
         input_ids = input_ids + ([self.wrapper.tokenizer.pad_token_id] * padding_length)
         attention_mask = attention_mask + ([0] * padding_length)
         token_type_ids = token_type_ids + ([0] * padding_length)

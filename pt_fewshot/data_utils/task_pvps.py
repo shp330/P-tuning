@@ -163,6 +163,7 @@ class PVP(ABC):
         num_special = self.wrapper.tokenizer.num_special_tokens_to_add(bool(parts_b))
         self.truncate(parts_a, parts_b, max_length=self.wrapper.config.max_seq_length - num_special)
 
+        # 将 token id 展平：[[1, 10, 11], [13, 24]] -> [1, 10, 11, 13, 24]
         tokens_a = [token_id for part, _ in parts_a for token_id in part]
         # tokens_b = [token_id for part, _ in parts_b for token_id in part] if parts_b else None
         tokens_b = [token_id for part, _ in parts_b for token_id in part] if parts_b else []
@@ -367,6 +368,8 @@ class RtePVP(PVP):
             # few-shot
             string_list_a = [text_a, 'Question:', text_b, "?", "the", "Answer:", self.mask, "."]
             string_list_b = []
+            # block_flag 用于指示哪些 token 属于“可学习的 soft prompt”或“需要特殊处理”
+            # 1 表示“属于 prompt 模板部分”
             block_flag_a = [0, 0, 0, 0, 1, 0, 0, 0]
             block_flag_b = []
             assert len(string_list_a) == len(block_flag_a)
@@ -641,6 +644,7 @@ class MultiRcPVP(PVP):
         self,
         example: InputExample
         ) -> FilledPattern:
+        # 是否可被截断
         passage = self.shortenable(example.text_a)
         question = example.text_b
         answer = example.meta['answer']

@@ -104,7 +104,7 @@ class ContinuousPrompt(torch.nn.Module):
             config=model_config,
             cache_dir=config.cache_dir if config.cache_dir else None)
 
-
+        # prompt 仅应用在嵌入层
         self.prompt_embeddings = torch.nn.Embedding(self.prompt_length, self.embed_size)
         if config.prompt_encoder_type == "lstm":
             self.lstm_head = torch.nn.LSTM(input_size=self.hidden_size,
@@ -562,42 +562,60 @@ class TransformerModelWrapper:
 
 
     def generate_default_inputs(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """
+        从输入批次中获取基础的 token 嵌入，然后将预定义位置（由 block_flag 标记）的 token 嵌入替换为模型生成的提示嵌入，
+          最终返回包含处理后嵌入和注意力掩码等信息的输入字典，用于后续的模型推理
+        Args:
+            batch:
 
+        Returns:
+
+        """
         input_ids = batch['input_ids']
+        # 获取批次大小，即输入样本的数量
         bz = batch['input_ids'].shape[0]
+        # block_flag：从批次中取出“需要替换嵌入的位置” 的标记张量（标记为 1 的位置需要替换）
         block_flag = batch["block_flag"]
+        # 分布式训练处理：如果模型被 nn.DataParallel 或 nn.DistributedDataParallel 包装（有 module 属性），则取 model.module;
+        #   否则直接使用 self.model，确保能正确访问模型的底层层。
         model = self.model.module if hasattr(self.model, 'module') else self.model
 
+        # 从模型的词嵌入层中获取 input_ids 对应的原始词嵌入 raw_embeds，形状通常为 [batch_size, seq_len, embed_size]
         if self.config.model_type == "albert":
-            raw_embeds = model.model.albert.embeddings.word_embeddings(input_ids)
+            input_raw_embeds = model.model.albert.embeddings.word_embeddings(input_ids)
         elif self.config.model_type == "bert":
-            raw_embeds = model.model.bert.embeddings.word_embeddings(input_ids)
+            input_raw_embeds = model.model.bert.embeddings.word_embeddings(input_ids)
         elif self.config.model_type == "roberta":
-            raw_embeds = model.model.roberta.embeddings.word_embeddings(input_ids)
+            input_raw_embeds = model.model.roberta.embeddings.word_embeddings(input_ids)
 
-        replace_embeds = model.prompt_embeddings(
-            torch.LongTensor(list(range(model.prompt_length))).cuda())
-        replace_embeds = replace_embeds.unsqueeze(0) # [batch_size, prompt_length, embed_size]
+        # prompt 的输入为列表 [0, 1, 2, ..., prompt_len - 1]
+        prompt_embeds = model.prompt_embeddings(
+            torch.LongTensor(list(range(model.prompt_length))).cuda()) # [prompt_length, embed_size]
+        prompt_embeds = prompt_embeds.unsqueeze(0) # [1, prompt_length, embed_size]
 
         if self.config.prompt_encoder_type == "lstm":
-            replace_embeds = model.lstm_head(replace_embeds)[0]  # [batch_size, seq_len, 2 * hidden_dim]
+            prompt_embeds = model.lstm_head(prompt_embeds)[0]  # [batch_size, seq_len, 2 * hidden_dim]
             if model.prompt_length == 1:
-                replace_embeds = model.mlp_head(replace_embeds)
+                prompt_embeds = model.mlp_head(prompt_embeds)
             else:
-                replace_embeds = model.mlp_head(replace_embeds).squeeze()
+                prompt_embeds = model.mlp_head(prompt_embeds).squeeze()
 
         elif self.config.prompt_encoder_type == "mlp":
-            replace_embeds = model.mlp(replace_embeds)
+            prompt_embeds = model.mlp(prompt_embeds)
         else:
             raise ValueError("unknown prompt_encoder_type.")
 
+        # (block_flag == 1): bool 张量，元素 1 变为 True，其余变为 False; [[2, 1, 0]] -> [[False, True, False]]
+        # .nonzero(): 非零元素的位置，形状为满足条件的元素的各维度索引；形状为 [num_nonzero, 2]，每行是 [批次索引, 序列位置索引]
+        # .reshape(): 结果形状为 [batch_size, prompt_len, 2]；确保每个样本对应 prompt_len 个需要替换的位置。
+        # [:, :, 1]：取出序列位置索引，最终 blocked_indices 形状为 [bz, prompt_len]，即每个样本的 prompt_len 个需要替换的位置
         blocked_indices = (block_flag == 1).nonzero().reshape((bz, model.prompt_length, 2))[:, :, 1]
 
         for bidx in range(bz):
             for i in range(blocked_indices.shape[1]):
-                raw_embeds[bidx, blocked_indices[bidx, i], :] = replace_embeds[i, :]
+                input_raw_embeds[bidx, blocked_indices[bidx, i], :] = prompt_embeds[i, :]
 
-        inputs = {'inputs_embeds': raw_embeds, 'attention_mask': batch['attention_mask']}
+        inputs = {'inputs_embeds': input_raw_embeds, 'attention_mask': batch['attention_mask']}
 
         if self.config.model_type in ['bert']:
             inputs['token_type_ids'] = batch['token_type_ids']
