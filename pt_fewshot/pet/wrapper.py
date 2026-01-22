@@ -569,6 +569,7 @@ class TransformerModelWrapper:
             batch:
 
         Returns:
+            输入嵌入和注意力掩码字典
 
         """
         input_ids = batch['input_ids']
